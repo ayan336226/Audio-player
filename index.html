@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ayan Voice Player</title>
+  <!-- Firebase App (core SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+
+<!-- Firebase Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0f0f0f;
+      --text-color: #fff;
+      --card-color: #1c1c1c;
+      --accent: #ff5252;
+    }
+
+    body.light {
+      --bg-color: #f4f4f4;
+      --text-color: #111;
+      --card-color: #fff;
+    }
+
+    body {
+      font-family: Poppins, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      text-align: center;
+      padding: 20px;
+      transition: 0.3s;
+    }
+
+    .profile {
+      margin-bottom: 15px;
+    }
+
+    .profile-pic {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--accent);
+    }
+
+    .profile h2 {
+      margin: 8px 0 2px;
+      font-size: 22px;
+    }
+
+    .tag {
+      color: #aaa;
+      font-size: 14px;
+      margin-top: 0;
+    }
+
+    header {
+      margin-bottom: 25px;
+    }
+
+    #themeToggle {
+      margin-top: 10px;
+      background: var(--card-color);
+      color: var(--text-color);
+      border: none;
+      padding: 8px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .audio-card {
+      background: var(--card-color);
+      border-radius: 15px;
+      margin: 20px auto;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 10px #0003;
+      transition: 0.3s;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 22px;
+    }
+
+    .like {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .heart {
+      font-size: 22px;
+      transition: 0.3s;
+      color: #666;
+    }
+
+    .heart.liked {
+      color: #ff2e63;
+      transform: scale(1.2);
+    }
+
+    .counter {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    /* Animated Title */
+    .animated-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: var(--accent);
+      height: 30px;
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 3px solid var(--accent);
+      animation: typing 4s steps(30) infinite alternate, blink 0.8s step-end infinite;
+    }
+
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    @keyframes blink {
+      50% { border-color: transparent; }
+    }
+
+    .summary {
+      margin: 10px 0;
+      font-size: 16px;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.2s linear;
+    }
+  </style>
+</head>
+<body>
+  <!-- 🔹 Profile Section -->
+  <div class="profile">
+    <img src="Gemini_Generated_Image_hkq0ozhkq0ozhkq0.png" alt="profile" class="profile-pic" />
+    <h2>Muhammad Ayan</h2>
+    <p class="tag">Singer</p>
+  </div>
+
+  <!-- 🔹 Header Info -->
+  <header>
+    <h1 class="animated-title"></h1>
+    <div class="summary">
+      ❤️ Total Likes: <span id="totalLikes">0</span> |
+      ▶ Total Plays: <span id="totalPlays">0</span>
+    </div>
+    <button id="themeToggle">🌙 Dark</button>
+  </header>
+
+  <!-- 🔹 Audio Section -->
+  <div id="audioList" class="audio-section"></div>
+
+  <script src="https://unpkg.com/wavesurfer.js"></script>
+<!-- Firebase SDKs -->
+<script type="module">
+  // Import Firebase core + database
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import { getDatabase, ref, set, get, child, update } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+
+  // 🔥 Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyCHD4EXnRFcBwO39LdlMHJQGCY6sOTwqak",
+  authDomain: "my-audio-player-2f419.firebaseapp.com",
+  databaseURL: "https://my-audio-player-2f419-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "my-audio-player-2f419",
+  storageBucket: "my-audio-player-2f419.appspot.com",
+  messagingSenderId: "602023378791",
+  appId: "1:602023378791:web:f0a976efec4e247d08b9c2"
+};
+
+
+  // 🔗 Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // 🎵 Audio data (initial defaults)
+  const audios = [
+    { id: "audio1", file: "Chal (mp3cut.net).mp3", title: "Chal waha jaate hain" },
+    { id: "audio2", file: "Dekha... tenu... me.mp3", title: "Dekha tenu" },
+    { id: "audio3", file: "REC20251007222908.mp3", title: "Saiyaara" }
+  ];
+
+  const container = document.getElementById("audioList");
+  const totalLikesEl = document.getElementById("totalLikes");
+  const totalPlaysEl = document.getElementById("totalPlays");
+
+  // 🎧 Create UI cards for each audio
+  audios.forEach(audio => {
+    const card = document.createElement("div");
+    card.className = "audio-card";
+    card.innerHTML = `
+      <h3>${audio.title}</h3>
+      <div class="progress-container"><div class="progress-bar"></div></div>
+      <div id="${audio.id}" class="waveform"></div>
+      <div class="controls">
+        <button class="play">▶</button>
+        <div class="like">
+          <span class="heart">❤</span>
+          <span class="likes">0</span>
+        </div>
+        <div class="plays">▶ <span class="plays-count">0</span></div>
+      </div>
+    `;
+    container.appendChild(card);
+
+    // WaveSurfer
+    const wavesurfer = WaveSurfer.create({
+      container: `#${audio.id}`,
+      waveColor: "#666",
+      progressColor: "#ff5252",
+      height: 80,
+      barWidth: 2,
+    });
+    wavesurfer.load(audio.file);
+
+    const playBtn = card.querySelector(".play");
+    const heart = card.querySelector(".heart");
+    const likesEl = card.querySelector(".likes");
+    const playsEl = card.querySelector(".plays-count");
+    const progressBar = card.querySelector(".progress-bar");
+
+    // Load counts from Firebase
+    const audioRef = ref(db, `audios/${audio.id}`);
+    get(audioRef).then(snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        likesEl.textContent = data.likes || 0;
+        playsEl.textContent = data.plays || 0;
+        updateTotals();
+      } else {
+        // create default record
+        set(audioRef, { likes: 0, plays: 0 });
+      }
+    });
+
+    // ❤️ Like handler
+    heart.addEventListener("click", async () => {
+      const liked = heart.classList.toggle("liked");
+      const currentLikes = Number(likesEl.textContent);
+      const newLikes = liked ? currentLikes + 1 : currentLikes - 1;
+      likesEl.textContent = newLikes;
+      await update(ref(db, `audios/${audio.id}`), { likes: newLikes });
+      updateTotals();
+    });
+
+    // ▶ Play handler
+    playBtn.addEventListener("click", async () => {
+      if (wavesurfer.isPlaying()) {
+        wavesurfer.pause();
+        playBtn.textContent = "▶";
+      } else {
+        wavesurfer.play();
+        playBtn.textContent = "⏸";
+        const newPlays = Number(playsEl.textContent) + 1;
+        playsEl.textContent = newPlays;
+        await update(ref(db, `audios/${audio.id}`), { plays: newPlays });
+        updateTotals();
+      }
+    });
+
+    // Progress bar
+    wavesurfer.on("audioprocess", () => {
+      const progress = wavesurfer.getCurrentTime() / wavesurfer.getDuration();
+      progressBar.style.width = `${progress * 100}%`;
+    });
+    wavesurfer.on("finish", () => {
+      playBtn.textContent = "▶";
+      progressBar.style.width = "100%";
+    });
+  });
+
+  // 📊 Update total stats
+  async function updateTotals() {
+    let totalLikes = 0;
+    let totalPlays = 0;
+    for (const audio of audios) {
+      const snapshot = await get(child(ref(db), `audios/${audio.id}`));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        totalLikes += data.likes || 0;
+        totalPlays += data.plays || 0;
+      }
+    }
+    totalLikesEl.textContent = totalLikes;
+    totalPlaysEl.textContent = totalPlays;
+  }
+
+    const themeToggle = document.getElementById("themeToggle");
+  const body = document.body;
+
+  // Check localStorage for saved theme
+  if(localStorage.getItem("theme") === "light") {
+    body.classList.add("light");
+    themeToggle.textContent = "🌙 Dark";
+  } else {
+    body.classList.remove("light");
+    themeToggle.textContent = "☀ Light";
+  }
+
+  // Toggle on button click
+  themeToggle.addEventListener("click", () => {
+    body.classList.toggle("light");
+    if(body.classList.contains("light")) {
+      themeToggle.textContent = "🌙 Dark";
+      localStorage.setItem("theme", "light");
+    } else {
+      themeToggle.textContent = "☀ Light";
+      localStorage.setItem("theme", "dark");
+    }
+  });
+</script>
+
+</body>
+</html>
