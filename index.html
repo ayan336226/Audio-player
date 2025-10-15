@@ -343,7 +343,23 @@ const firebaseConfig = {
       localStorage.setItem("theme", "dark");
     }
   });
+
+
+  // 🔹 Set Animated Title Text
+const animatedTitle = document.querySelector(".animated-title");
+const titles = ["Welcome to Ayan Voice Player", "Listen & Like Your Favorite Tracks", "Enjoy Music Anywhere"];
+let index = 0;
+
+function rotateTitle() {
+  animatedTitle.textContent = titles[index];
+  index = (index + 1) % titles.length;
+}
+
+rotateTitle();
+setInterval(rotateTitle, 4000); // har 4 second me title change hoga
+
 </script>
 
 </body>
 </html>
+
